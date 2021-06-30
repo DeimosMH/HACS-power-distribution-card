@@ -5,7 +5,7 @@ import { guard } from 'lit/directives/guard.js';
 
 import Sortable, { SortableEvent } from 'sortablejs/modular/sortable.core.esm';
 
-import { fireEvent, HomeAssistant, LovelaceCardEditor } from 'custom-card-helpers';
+import { fireEvent, getLovelace, HomeAssistant, LovelaceCardEditor, LovelaceCardConfig } from 'custom-card-helpers';
 import { PDCConfig, HTMLElementValue, CustomValueEvent, SubElementConfig, BarSettings } from './types';
 import { localize } from './localize/localize';
 
@@ -560,20 +560,40 @@ export class PowerDistributionCardEditor extends LitElement implements LovelaceC
    *  ></hui-card-element-editor>
    */
 
-  //@query('hui-card-element-editor')
-  //private _cardEditorEl?;
-
   private _cardEditor(): TemplateResult {
-    //const card = this._subElementEditor?.element;
+    const content = <LovelaceCardConfig | undefined>this._config.center.content;
+    if (content?.type == null) {
+      console.log('picker');
+      return html`
+        <hui-card-picker
+          .hass=${this.hass}
+          .lovelace=${getLovelace()}
+          @config-changed="${this._handleCardPicked}"
+        ></hui-card-picker>
+      `;
+    }
     return html`
-      Sadly you cannot edit cards from the visual editor yet.
-      <p />
-      Check out the
-      <a target="_blank" rel="noopener noreferrer" href="https://github.com/JonahKr/power-distribution-card#cards-"
-        >Readme</a
-      >
-      to check out the latest and best way to add it.
+      <hui-card-element-editor
+        .hass=${this.hass}
+        .value=${content}
+        .lovelace=${getLovelace()}
+      ></hui-card-element-editor>
     `;
+  }
+
+  protected _handleCardPicked(ev): void {
+    ev.stopPropagation();
+    if (!this._config) {
+      return;
+    }
+    const config = ev.detail.config;
+    const center = { ...this._config.center, content: config };
+    const _config = { ...this._config, center: center };
+    console.dir(config);
+    console.dir(center);
+    console.dir(_config);
+    //this._config = { ...this._config, center };
+    //fireEvent(this, "config-changed", { config: this._config });
   }
 
   /**
@@ -781,7 +801,6 @@ export class PowerDistributionCardEditor extends LitElement implements LovelaceC
     const index = ev.currentTarget?.index || 0;
     const newEntities = [...this._config.entities];
     newEntities.splice(index, 1);
-
     this._valueChanged({ target: { configValue: 'entities', value: newEntities } });
   }
   /**
